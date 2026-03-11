@@ -1,0 +1,19 @@
+# Настройки анализа кода Flutter
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    # Стиль кода
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_final_locals: true
+    prefer_single_quotes: true
+    sort_constructors_first: true
+    sort_unnamed_constructors_first: true
+
+    # Безопасность
+    avoid_print: true
+    avoid_web_libraries_in_flutter: true
+
+    # Документация
+    public_member_api_docs: false

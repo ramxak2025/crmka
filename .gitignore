@@ -1,0 +1,33 @@
+# Flutter
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+.vscode/
+*.lock
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+.eggs/
+*.egg
+.pytest_cache/
+venv/
+.env
+
+# IDE
+.DS_Store
+*.swp
+*.swo
+Thumbs.db
+
+# Сборка
+*.apk
+*.aab
+*.ipa
