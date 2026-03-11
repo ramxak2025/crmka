@@ -3,12 +3,12 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import quran_router, hadith_router
+from app.routers import quran_router, hadith_router, arabic_learning_router
 
 # Создание приложения FastAPI
 app = FastAPI(
     title="Noor Muslim API",
-    description="REST API для исламского приложения: Коран, Хадисы, Тафсиры",
+    description="REST API для исламского приложения: Коран, Хадисы, Тафсиры, Обучение арабскому",
     version="1.0.0",
     docs_url="/docs",
 )
@@ -36,6 +36,7 @@ async def root():
 # Подключение маршрутов
 app.include_router(quran_router.router, prefix="/api/v1/quran", tags=["Коран"])
 app.include_router(hadith_router.router, prefix="/api/v1/hadith", tags=["Хадисы"])
+app.include_router(arabic_learning_router.router, prefix="/api/v1/arabic", tags=["Обучение арабскому"])
 
 if __name__ == "__main__":
     import uvicorn

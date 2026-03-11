@@ -7,9 +7,10 @@ import 'package:noor_muslim/features/prayer_times/presentation/screens/prayer_ti
 import 'package:noor_muslim/features/qibla/presentation/screens/qibla_screen.dart';
 import 'package:noor_muslim/features/hadith/presentation/screens/hadith_screen.dart';
 import 'package:noor_muslim/features/quran/presentation/screens/quran_screen.dart';
+import 'package:noor_muslim/features/arabic_learning/presentation/screens/arabic_learning_screen.dart';
 
 /// Главный экран приложения с навигацией.
-/// Содержит 4 раздела: Намаз, Кибла, Хадисы, Коран.
+/// Содержит 5 разделов: Намаз, Кибла, Обучение, Хадисы, Коран.
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
 
@@ -24,6 +25,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final List<Widget> _screens = const [
     PrayerTimesScreen(),
     QiblaScreen(),
+    ArabicLearningScreen(),
     HadithScreen(),
     QuranScreen(),
   ];
@@ -50,6 +52,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.explore_outlined),
             selectedIcon: Icon(Icons.explore),
             label: 'Кибла',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.school_outlined),
+            selectedIcon: Icon(Icons.school),
+            label: 'Обучение',
           ),
           NavigationDestination(
             icon: Icon(Icons.auto_stories_outlined),
