@@ -4,8 +4,9 @@
 class ApiConstants {
   ApiConstants._();
 
-  /// Базовый URL нашего FastAPI бекенда
-  static const String baseUrl = 'http://localhost:8000/api/v1';
+  /// Базовый URL нашего FastAPI бекенда на VDS
+  /// Замените на IP вашего VDS или домен
+  static const String baseUrl = 'http://192.0.2.2:8000/api/v1';
 
   /// Таймаут для сетевых запросов (в миллисекундах)
   static const int connectionTimeout = 15000;
@@ -23,6 +24,14 @@ class ApiConstants {
   static const String hadithDetail = '/hadith/{hadithId}';
   static const String hadithRandom = '/hadith/random';
   static const String hadithSearch = '/hadith/search';
+
+  // === Эндпоинты обучения арабскому ===
+  static const String arabicAlphabet = '/arabic/alphabet';
+  static const String arabicLetter = '/arabic/alphabet/{order}';
+  static const String arabicDiacritics = '/arabic/diacritics';
+  static const String arabicTajweed = '/arabic/tajweed';
+  static const String arabicTajweedRule = '/arabic/tajweed/{ruleId}';
+  static const String arabicCurriculum = '/arabic/curriculum';
 
   // === Координаты Мекки (Кааба) ===
   static const double meccaLatitude = 21.4225;
