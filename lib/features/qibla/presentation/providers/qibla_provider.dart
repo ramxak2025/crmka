@@ -4,7 +4,9 @@
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_compass/flutter_compass.dart';
+import 'package:noor_muslim/core/constants/city_constants.dart';
 import 'package:noor_muslim/core/utils/qibla_calculator.dart';
+import 'package:noor_muslim/services/city_selection_service.dart';
 import 'package:noor_muslim/services/location_service.dart';
 
 /// Состояние компаса Киблы
@@ -30,6 +32,12 @@ class QiblaState {
   /// Долгота пользователя
   final double longitude;
 
+  /// Название города
+  final String cityName;
+
+  /// Выбранный город
+  final CityData? selectedCity;
+
   const QiblaState({
     this.qiblaDirection = 0,
     this.compassHeading = 0,
@@ -38,6 +46,8 @@ class QiblaState {
     this.error,
     this.latitude = 0,
     this.longitude = 0,
+    this.cityName = '',
+    this.selectedCity,
   });
 
   /// Угол поворота стрелки Киблы на компасе
@@ -52,6 +62,8 @@ class QiblaState {
     String? error,
     double? latitude,
     double? longitude,
+    String? cityName,
+    CityData? selectedCity,
   }) {
     return QiblaState(
       qiblaDirection: qiblaDirection ?? this.qiblaDirection,
@@ -61,6 +73,8 @@ class QiblaState {
       error: error,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
+      cityName: cityName ?? this.cityName,
+      selectedCity: selectedCity ?? this.selectedCity,
     );
   }
 }
@@ -81,41 +95,89 @@ class QiblaNotifier extends StateNotifier<QiblaState> {
     try {
       state = state.copyWith(isLoading: true, error: null);
 
+      // Проверяем сохранённый город
+      final savedCity = await CitySelectionService.loadCity();
+      if (savedCity != null) {
+        _calculateForCoordinates(
+          savedCity.latitude,
+          savedCity.longitude,
+          savedCity.name,
+          savedCity,
+        );
+        _startCompass();
+        return;
+      }
+
+      // Пробуем GPS
       final hasPermission = await _locationService.requestPermission();
       if (!hasPermission) {
-        state = state.copyWith(
-          isLoading: false,
-          error: 'Для определения Киблы нужен доступ к геолокации',
-        );
+        // Без GPS — используем Москву, но показываем подсказку
+        _calculateForCoordinates(55.7558, 37.6173, 'Москва', null);
+        _startCompass();
         return;
       }
 
       final position = await _locationService.getCurrentPosition();
-      final qiblaDirection = QiblaCalculator.calculate(
-        latitude: position.latitude,
-        longitude: position.longitude,
+      _calculateForCoordinates(
+        position.latitude,
+        position.longitude,
+        'Текущее местоположение',
+        null,
       );
-      final distance = QiblaCalculator.distanceToMecca(
-        latitude: position.latitude,
-        longitude: position.longitude,
-      );
-
-      state = state.copyWith(
-        qiblaDirection: qiblaDirection,
-        distanceToMecca: distance,
-        latitude: position.latitude,
-        longitude: position.longitude,
-        isLoading: false,
-      );
-
-      // Подписываемся на обновления компаса
       _startCompass();
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Ошибка инициализации компаса: $e',
-      );
+      // При ошибке GPS — используем сохранённый город или Москву
+      final savedCity = await CitySelectionService.loadCity();
+      if (savedCity != null) {
+        _calculateForCoordinates(
+          savedCity.latitude,
+          savedCity.longitude,
+          savedCity.name,
+          savedCity,
+        );
+      } else {
+        _calculateForCoordinates(55.7558, 37.6173, 'Москва', null);
+      }
+      _startCompass();
     }
+  }
+
+  /// Рассчитать направление Киблы для координат
+  void _calculateForCoordinates(
+    double lat,
+    double lon,
+    String city,
+    CityData? cityData,
+  ) {
+    final qiblaDirection = QiblaCalculator.calculate(
+      latitude: lat,
+      longitude: lon,
+    );
+    final distance = QiblaCalculator.distanceToMecca(
+      latitude: lat,
+      longitude: lon,
+    );
+
+    state = state.copyWith(
+      qiblaDirection: qiblaDirection,
+      distanceToMecca: distance,
+      latitude: lat,
+      longitude: lon,
+      cityName: city,
+      selectedCity: cityData,
+      isLoading: false,
+    );
+  }
+
+  /// Выбрать город вручную
+  Future<void> selectCity(CityData city) async {
+    await CitySelectionService.saveCity(city);
+    _calculateForCoordinates(
+      city.latitude,
+      city.longitude,
+      city.name,
+      city,
+    );
   }
 
   /// Запустить слушатель компаса
@@ -127,7 +189,7 @@ class QiblaNotifier extends StateNotifier<QiblaState> {
         }
       },
       onError: (error) {
-        state = state.copyWith(error: 'Компас недоступен на этом устройстве');
+        // Компас недоступен — не критичная ошибка, направление всё равно показываем
       },
     );
   }

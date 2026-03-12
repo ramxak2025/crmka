@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:noor_muslim/core/constants/prayer_constants.dart';
 import 'package:noor_muslim/core/theme/app_colors.dart';
+import 'package:noor_muslim/core/widgets/city_selection_dialog.dart';
 import 'package:noor_muslim/core/widgets/islamic_card.dart';
 import 'package:noor_muslim/core/widgets/prayer_time_card.dart';
 import 'package:noor_muslim/core/widgets/shimmer_loading.dart';
@@ -26,13 +27,13 @@ class PrayerTimesScreen extends ConsumerWidget {
             ? _buildLoading()
             : state.error != null
                 ? _buildError(context, state.error!, ref)
-                : _buildContent(context, state),
+                : _buildContent(context, state, ref),
       ),
     );
   }
 
   /// Контент экрана с данными
-  Widget _buildContent(BuildContext context, PrayerTimesState state) {
+  Widget _buildContent(BuildContext context, PrayerTimesState state, WidgetRef ref) {
     final theme = Theme.of(context);
     final timeFormat = DateFormat('HH:mm');
 
@@ -40,7 +41,7 @@ class PrayerTimesScreen extends ConsumerWidget {
       slivers: [
         // Заголовок с обратным отсчётом
         SliverToBoxAdapter(
-          child: _buildHeader(context, state, timeFormat),
+          child: _buildHeader(context, state, timeFormat, ref),
         ),
 
         // Хиджри дата
@@ -90,6 +91,7 @@ class PrayerTimesScreen extends ConsumerWidget {
     BuildContext context,
     PrayerTimesState state,
     DateFormat timeFormat,
+    WidgetRef ref,
   ) {
     return IslamicCard(
       showPattern: true,
@@ -97,20 +99,25 @@ class PrayerTimesScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          // Город
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.location_on, color: Colors.white70, size: 16),
-              const SizedBox(width: 4),
-              Text(
-                state.cityName.isNotEmpty ? state.cityName : 'Текущее местоположение',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
+          // Город — нажимается для выбора
+          GestureDetector(
+            onTap: () => _showCitySelection(context, ref, state),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.location_on, color: Colors.white70, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  state.cityName.isNotEmpty ? state.cityName : 'Текущее местоположение',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 20),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -153,6 +160,21 @@ class PrayerTimesScreen extends ConsumerWidget {
     );
   }
 
+  /// Показать диалог выбора города
+  Future<void> _showCitySelection(
+    BuildContext context,
+    WidgetRef ref,
+    PrayerTimesState state,
+  ) async {
+    final city = await CitySelectionDialog.show(
+      context,
+      currentCity: state.selectedCity,
+    );
+    if (city != null) {
+      ref.read(prayerTimesProvider.notifier).selectCity(city);
+    }
+  }
+
   /// Форматирование Duration в "ЧЧ:ММ:СС"
   String _formatDuration(Duration? duration) {
     if (duration == null) return '--:--:--';
@@ -191,6 +213,17 @@ class PrayerTimesScreen extends ConsumerWidget {
             ElevatedButton(
               onPressed: () => ref.read(prayerTimesProvider.notifier).refresh(),
               child: const Text('Повторить'),
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final city = await CitySelectionDialog.show(context);
+                if (city != null) {
+                  ref.read(prayerTimesProvider.notifier).selectCity(city);
+                }
+              },
+              icon: const Icon(Icons.location_city),
+              label: const Text('Выбрать город'),
             ),
           ],
         ),

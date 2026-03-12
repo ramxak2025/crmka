@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:noor_muslim/core/theme/app_colors.dart';
+import 'package:noor_muslim/core/widgets/city_selection_dialog.dart';
 import 'package:noor_muslim/features/qibla/presentation/providers/qibla_provider.dart';
 
 /// Экран направления Киблы с компасом.
@@ -21,14 +22,14 @@ class QiblaScreen extends ConsumerWidget {
         child: state.isLoading
             ? const Center(child: CircularProgressIndicator())
             : state.error != null
-                ? _buildError(context, state.error!)
-                : _buildCompass(context, state),
+                ? _buildError(context, state.error!, ref)
+                : _buildCompass(context, state, ref),
       ),
     );
   }
 
   /// Основной виджет компаса
-  Widget _buildCompass(BuildContext context, QiblaState state) {
+  Widget _buildCompass(BuildContext context, QiblaState state, WidgetRef ref) {
     final theme = Theme.of(context);
 
     return Column(
@@ -41,6 +42,27 @@ class QiblaScreen extends ConsumerWidget {
           style: theme.textTheme.headlineMedium,
         ),
         const SizedBox(height: 8),
+
+        // Город — нажимается для выбора
+        GestureDetector(
+          onTap: () => _showCitySelection(context, ref, state),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.location_on, color: AppColors.subtleText, size: 16),
+              const SizedBox(width: 4),
+              Text(
+                state.cityName.isNotEmpty ? state.cityName : 'Текущее местоположение',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: AppColors.subtleText,
+                ),
+              ),
+              const Icon(Icons.arrow_drop_down, color: AppColors.subtleText, size: 20),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+
         Text(
           '${state.qiblaDirection.toStringAsFixed(1)}° от севера',
           style: theme.textTheme.bodyLarge?.copyWith(
@@ -145,8 +167,23 @@ class QiblaScreen extends ConsumerWidget {
     );
   }
 
+  /// Показать диалог выбора города
+  Future<void> _showCitySelection(
+    BuildContext context,
+    WidgetRef ref,
+    QiblaState state,
+  ) async {
+    final city = await CitySelectionDialog.show(
+      context,
+      currentCity: state.selectedCity,
+    );
+    if (city != null) {
+      ref.read(qiblaProvider.notifier).selectCity(city);
+    }
+  }
+
   /// Ошибка
-  Widget _buildError(BuildContext context, String error) {
+  Widget _buildError(BuildContext context, String error, WidgetRef ref) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -156,6 +193,17 @@ class QiblaScreen extends ConsumerWidget {
             const Icon(Icons.explore_off, size: 64, color: AppColors.gold),
             const SizedBox(height: 16),
             Text(error, textAlign: TextAlign.center),
+            const SizedBox(height: 24),
+            OutlinedButton.icon(
+              onPressed: () async {
+                final city = await CitySelectionDialog.show(context);
+                if (city != null) {
+                  ref.read(qiblaProvider.notifier).selectCity(city);
+                }
+              },
+              icon: const Icon(Icons.location_city),
+              label: const Text('Выбрать город вручную'),
+            ),
           ],
         ),
       ),

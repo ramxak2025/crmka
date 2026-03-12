@@ -3,9 +3,11 @@
 
 import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:noor_muslim/core/constants/city_constants.dart';
 import 'package:noor_muslim/core/constants/prayer_constants.dart';
 import 'package:noor_muslim/core/utils/prayer_time_calculator.dart';
 import 'package:noor_muslim/models/prayer_times_model.dart';
+import 'package:noor_muslim/services/city_selection_service.dart';
 import 'package:noor_muslim/services/location_service.dart';
 
 /// Состояние экрана времени намаза
@@ -17,6 +19,7 @@ class PrayerTimesState {
   final bool isLoading;
   final String? error;
   final String cityName;
+  final CityData? selectedCity;
 
   const PrayerTimesState({
     this.prayerTimes,
@@ -26,6 +29,7 @@ class PrayerTimesState {
     this.isLoading = false,
     this.error,
     this.cityName = '',
+    this.selectedCity,
   });
 
   /// Создание копии с обновлёнными полями
@@ -37,6 +41,8 @@ class PrayerTimesState {
     bool? isLoading,
     String? error,
     String? cityName,
+    CityData? selectedCity,
+    bool clearSelectedCity = false,
   }) {
     return PrayerTimesState(
       prayerTimes: prayerTimes ?? this.prayerTimes,
@@ -46,6 +52,7 @@ class PrayerTimesState {
       isLoading: isLoading ?? this.isLoading,
       error: error,
       cityName: cityName ?? this.cityName,
+      selectedCity: clearSelectedCity ? null : (selectedCity ?? this.selectedCity),
     );
   }
 }
@@ -65,15 +72,28 @@ class PrayerTimesNotifier extends StateNotifier<PrayerTimesState> {
     _loadPrayerTimes();
   }
 
-  /// Загрузить время намаза на основе текущего местоположения
+  /// Загрузить время намаза — сначала проверяем сохранённый город
   Future<void> _loadPrayerTimes() async {
     try {
       state = state.copyWith(isLoading: true, error: null);
 
+      // Проверяем сохранённый город
+      final savedCity = await CitySelectionService.loadCity();
+      if (savedCity != null) {
+        _calculateForCoordinates(
+          savedCity.latitude,
+          savedCity.longitude,
+          savedCity.name,
+          savedCity,
+        );
+        return;
+      }
+
+      // Пробуем GPS
       final hasPermission = await _locationService.requestPermission();
       if (!hasPermission) {
         // Если нет разрешения — используем координаты Москвы по умолчанию
-        _calculateForCoordinates(55.7558, 37.6173, 'Москва');
+        _calculateForCoordinates(55.7558, 37.6173, 'Москва', null);
         return;
       }
 
@@ -81,18 +101,32 @@ class PrayerTimesNotifier extends StateNotifier<PrayerTimesState> {
       _calculateForCoordinates(
         position.latitude,
         position.longitude,
-        '', // Город определится через геокодинг
+        'Текущее местоположение',
+        null,
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Ошибка определения местоположения: $e',
-      );
+      // При ошибке GPS — пробуем сохранённый город или Москву
+      final savedCity = await CitySelectionService.loadCity();
+      if (savedCity != null) {
+        _calculateForCoordinates(
+          savedCity.latitude,
+          savedCity.longitude,
+          savedCity.name,
+          savedCity,
+        );
+      } else {
+        _calculateForCoordinates(55.7558, 37.6173, 'Москва', null);
+      }
     }
   }
 
   /// Рассчитать времена для конкретных координат
-  void _calculateForCoordinates(double lat, double lon, String city) {
+  void _calculateForCoordinates(
+    double lat,
+    double lon,
+    String city,
+    CityData? cityData,
+  ) {
     final now = DateTime.now();
     final prayerTimes = _calculator.calculate(
       latitude: lat,
@@ -113,6 +147,7 @@ class PrayerTimesNotifier extends StateNotifier<PrayerTimesState> {
       timeUntilNext: timeUntilNext,
       isLoading: false,
       cityName: city,
+      selectedCity: cityData,
     );
 
     // Запускаем таймер для обновления обратного отсчёта
@@ -136,6 +171,17 @@ class PrayerTimesNotifier extends StateNotifier<PrayerTimesState> {
         );
       }
     });
+  }
+
+  /// Выбрать город вручную
+  Future<void> selectCity(CityData city) async {
+    await CitySelectionService.saveCity(city);
+    _calculateForCoordinates(
+      city.latitude,
+      city.longitude,
+      city.name,
+      city,
+    );
   }
 
   /// Изменить метод расчёта
