@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:noor_muslim/core/constants/prayer_constants.dart';
 import 'package:noor_muslim/core/utils/prayer_time_calculator.dart';
 import 'package:noor_muslim/models/prayer_times_model.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:noor_muslim/services/location_service.dart';
 
 /// Состояние экрана времени намаза
@@ -70,22 +71,36 @@ class PrayerTimesNotifier extends StateNotifier<PrayerTimesState> {
     try {
       state = state.copyWith(isLoading: true, error: null);
 
-      final hasPermission = await _locationService.requestPermission();
-      if (!hasPermission) {
-        // Если нет разрешения — используем координаты Москвы по умолчанию
-        _calculateForCoordinates(55.7558, 37.6173, 'Москва');
-        return;
-      }
+      // Общий таймаут 8 секунд на получение геолокации
+      final position = await Future.any([
+        _getPositionIfAllowed(),
+        Future.delayed(const Duration(seconds: 8), () => null),
+      ]);
 
-      final position = await _locationService.getCurrentPosition();
-      _calculateForCoordinates(
-        position.latitude,
-        position.longitude,
-        'Текущее местоположение',
-      );
+      if (position != null) {
+        _calculateForCoordinates(
+          position.latitude,
+          position.longitude,
+          'Текущее местоположение',
+        );
+      } else {
+        // Таймаут или нет разрешения — фоллбэк на Москву
+        _calculateForCoordinates(55.7558, 37.6173, 'Москва');
+      }
     } catch (e) {
       // При ошибке GPS — фоллбэк на Москву
       _calculateForCoordinates(55.7558, 37.6173, 'Москва');
+    }
+  }
+
+  /// Попытка получить позицию с проверкой разрешений
+  Future<Position?> _getPositionIfAllowed() async {
+    try {
+      final hasPermission = await _locationService.requestPermission();
+      if (!hasPermission) return null;
+      return await _locationService.getCurrentPosition();
+    } catch (_) {
+      return null;
     }
   }
 
