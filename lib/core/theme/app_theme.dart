@@ -51,7 +51,7 @@ class AppTheme {
         elevation: 8,
         height: 70,
         indicatorColor: AppColors.primaryGreen.withOpacity(0.15),
-        labelTextStyle: WidgetStatePropertyAll(
+        labelTextStyle: MaterialStatePropertyAll(
           GoogleFonts.rubik(fontSize: 12, fontWeight: FontWeight.w500),
         ),
       ),
@@ -109,7 +109,7 @@ class AppTheme {
         height: 70,
         backgroundColor: AppColors.darkCard,
         indicatorColor: AppColors.primaryGreen.withOpacity(0.2),
-        labelTextStyle: WidgetStatePropertyAll(
+        labelTextStyle: MaterialStatePropertyAll(
           GoogleFonts.rubik(fontSize: 12, fontWeight: FontWeight.w500),
         ),
       ),
