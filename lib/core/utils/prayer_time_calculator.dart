@@ -132,7 +132,8 @@ class PrayerTimeCalculator {
     final cosHA = (-_sin(angle) - _sin(latitude) * _sin(declination)) /
         (_cos(latitude) * _cos(declination));
 
-    return _arccos(cosHA);
+    // Clamp для высоких широт, где солнце не достигает нужного угла
+    return _arccos(cosHA.clamp(-1.0, 1.0));
   }
 
   /// Время Аср в зависимости от мазхаба
@@ -165,5 +166,8 @@ class PrayerTimeCalculator {
   double _radToDeg(double rad) => rad * 180.0 / pi;
 
   double _fixAngle(double a) => a - 360.0 * (a / 360.0).floor();
-  double _fixHour(double h) => h - 24.0 * (h / 24.0).floor();
+  double _fixHour(double h) {
+    if (h.isNaN || h.isInfinite) return 0.0;
+    return h - 24.0 * (h / 24.0).floor();
+  }
 }
