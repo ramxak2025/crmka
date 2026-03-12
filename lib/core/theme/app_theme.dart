@@ -27,7 +27,7 @@ class AppTheme {
       // Типографика
       textTheme: _buildTextTheme(Brightness.light),
       // Карточки
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 2,
         shadowColor: AppColors.primaryGreen.withOpacity(0.1),
         shape: RoundedRectangleBorder(
@@ -85,7 +85,7 @@ class AppTheme {
         onSurface: AppColors.lightText,
       ),
       textTheme: _buildTextTheme(Brightness.dark),
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         elevation: 4,
         shadowColor: Colors.black26,
         color: AppColors.darkCard,
