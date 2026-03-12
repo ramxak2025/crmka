@@ -81,14 +81,17 @@ class PrayerTimesNotifier extends StateNotifier<PrayerTimesState> {
       _calculateForCoordinates(
         position.latitude,
         position.longitude,
-        '', // Город определится через геокодинг
+        'Текущее местоположение',
       );
     } catch (e) {
-      state = state.copyWith(
-        isLoading: false,
-        error: 'Ошибка определения местоположения: $e',
-      );
+      // При ошибке GPS — фоллбэк на Москву
+      _calculateForCoordinates(55.7558, 37.6173, 'Москва');
     }
+  }
+
+  /// Установить город вручную (как в Sajda)
+  void setCity(String cityName, double latitude, double longitude) {
+    _calculateForCoordinates(latitude, longitude, cityName);
   }
 
   /// Рассчитать времена для конкретных координат

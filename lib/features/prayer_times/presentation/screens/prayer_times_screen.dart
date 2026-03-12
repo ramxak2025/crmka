@@ -9,6 +9,7 @@ import 'package:noor_muslim/core/theme/app_colors.dart';
 import 'package:noor_muslim/core/widgets/islamic_card.dart';
 import 'package:noor_muslim/core/widgets/prayer_time_card.dart';
 import 'package:noor_muslim/core/widgets/shimmer_loading.dart';
+import 'package:noor_muslim/data/cities_data.dart';
 import 'package:noor_muslim/features/prayer_times/presentation/providers/prayer_times_provider.dart';
 
 /// Экран расписания намаза.
@@ -26,13 +27,13 @@ class PrayerTimesScreen extends ConsumerWidget {
             ? _buildLoading()
             : state.error != null
                 ? _buildError(context, state.error!, ref)
-                : _buildContent(context, state),
+                : _buildContent(context, state, ref),
       ),
     );
   }
 
   /// Контент экрана с данными
-  Widget _buildContent(BuildContext context, PrayerTimesState state) {
+  Widget _buildContent(BuildContext context, PrayerTimesState state, WidgetRef ref) {
     final theme = Theme.of(context);
     final timeFormat = DateFormat('HH:mm');
 
@@ -40,7 +41,7 @@ class PrayerTimesScreen extends ConsumerWidget {
       slivers: [
         // Заголовок с обратным отсчётом
         SliverToBoxAdapter(
-          child: _buildHeader(context, state, timeFormat),
+          child: _buildHeader(context, state, timeFormat, ref),
         ),
 
         // Хиджри дата
@@ -90,6 +91,7 @@ class PrayerTimesScreen extends ConsumerWidget {
     BuildContext context,
     PrayerTimesState state,
     DateFormat timeFormat,
+    WidgetRef ref,
   ) {
     return IslamicCard(
       showPattern: true,
@@ -97,20 +99,26 @@ class PrayerTimesScreen extends ConsumerWidget {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          // Город
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.location_on, color: Colors.white70, size: 16),
-              const SizedBox(width: 4),
-              Text(
-                state.cityName.isNotEmpty ? state.cityName : 'Текущее местоположение',
-                style: const TextStyle(
-                  color: Colors.white70,
-                  fontSize: 14,
+          // Город — кликабельный для выбора
+          GestureDetector(
+            onTap: () => _showCityPicker(context, ref),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.location_on, color: Colors.white70, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  state.cityName.isNotEmpty ? state.cityName : 'Текущее местоположение',
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 14,
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 4),
+                const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 20),
+              ],
+            ),
           ),
           const SizedBox(height: 16),
 
@@ -162,6 +170,27 @@ class PrayerTimesScreen extends ConsumerWidget {
     return '$hours:$minutes:$seconds';
   }
 
+  /// Диалог выбора города
+  void _showCityPicker(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return _CityPickerSheet(
+          onCitySelected: (city) {
+            ref.read(prayerTimesProvider.notifier).setCity(
+              city.name,
+              city.latitude,
+              city.longitude,
+            );
+            Navigator.pop(context);
+          },
+        );
+      },
+    );
+  }
+
   /// Состояние загрузки
   Widget _buildLoading() {
     return Padding(
@@ -195,6 +224,112 @@ class PrayerTimesScreen extends ConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Виджет выбора города (bottom sheet)
+class _CityPickerSheet extends StatefulWidget {
+  final void Function(CityModel city) onCitySelected;
+
+  const _CityPickerSheet({required this.onCitySelected});
+
+  @override
+  State<_CityPickerSheet> createState() => _CityPickerSheetState();
+}
+
+class _CityPickerSheetState extends State<_CityPickerSheet> {
+  String _searchQuery = '';
+
+  @override
+  Widget build(BuildContext context) {
+    final cities = CitiesData.search(_searchQuery);
+    final theme = Theme.of(context);
+
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      maxChildSize: 0.95,
+      minChildSize: 0.4,
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: theme.scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            children: [
+              // Ручка
+              Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(top: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.subtleText,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Заголовок
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Выберите город',
+                  style: theme.textTheme.headlineMedium,
+                ),
+              ),
+              // Поиск
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextField(
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    hintText: 'Поиск города...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: theme.colorScheme.surface,
+                  ),
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // Список городов
+              Expanded(
+                child: ListView.builder(
+                  controller: scrollController,
+                  itemCount: cities.length,
+                  itemBuilder: (context, index) {
+                    final city = cities[index];
+                    return ListTile(
+                      leading: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryGreen.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.location_city,
+                          color: AppColors.primaryGreen,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(city.name),
+                      subtitle: Text(
+                        city.country,
+                        style: TextStyle(color: AppColors.subtleText, fontSize: 12),
+                      ),
+                      onTap: () => widget.onCitySelected(city),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
