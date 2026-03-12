@@ -4,9 +4,8 @@
 class ApiConstants {
   ApiConstants._();
 
-  /// Базовый URL нашего FastAPI бекенда на VDS
-  /// Замените на IP вашего VDS или домен
-  static const String baseUrl = 'http://192.0.2.2:8000/api/v1';
+  /// Базовый URL нашего FastAPI бекенда (локально на MacBook)
+  static const String baseUrl = 'http://localhost:8000/api/v1';
 
   /// Таймаут для сетевых запросов (в миллисекундах)
   static const int connectionTimeout = 15000;
