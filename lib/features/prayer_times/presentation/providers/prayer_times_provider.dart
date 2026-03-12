@@ -6,7 +6,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:noor_muslim/core/constants/prayer_constants.dart';
 import 'package:noor_muslim/core/utils/prayer_time_calculator.dart';
 import 'package:noor_muslim/models/prayer_times_model.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:noor_muslim/services/location_service.dart';
 
 /// Состояние экрана времени намаза
@@ -62,45 +61,36 @@ class PrayerTimesNotifier extends StateNotifier<PrayerTimesState> {
     PrayerTimeCalculator? calculator,
   })  : _locationService = locationService ?? LocationService(),
         _calculator = calculator ?? PrayerTimeCalculator(),
-        super(const PrayerTimesState(isLoading: true)) {
-    _loadPrayerTimes();
+        super(const PrayerTimesState(isLoading: false)) {
+    // Сразу показываем Москву, без ожидания GPS
+    _calculateForCoordinates(55.7558, 37.6173, 'Москва');
   }
 
-  /// Загрузить время намаза на основе текущего местоположения
-  Future<void> _loadPrayerTimes() async {
+  /// Определить местоположение по GPS (вызывается по кнопке)
+  Future<void> detectLocation() async {
     try {
       state = state.copyWith(isLoading: true, error: null);
 
-      // Общий таймаут 8 секунд на получение геолокации
-      final position = await Future.any([
-        _getPositionIfAllowed(),
-        Future.delayed(const Duration(seconds: 8), () => null),
-      ]);
-
-      if (position != null) {
-        _calculateForCoordinates(
-          position.latitude,
-          position.longitude,
-          'Текущее местоположение',
-        );
-      } else {
-        // Таймаут или нет разрешения — фоллбэк на Москву
-        _calculateForCoordinates(55.7558, 37.6173, 'Москва');
-      }
-    } catch (e) {
-      // При ошибке GPS — фоллбэк на Москву
-      _calculateForCoordinates(55.7558, 37.6173, 'Москва');
-    }
-  }
-
-  /// Попытка получить позицию с проверкой разрешений
-  Future<Position?> _getPositionIfAllowed() async {
-    try {
       final hasPermission = await _locationService.requestPermission();
-      if (!hasPermission) return null;
-      return await _locationService.getCurrentPosition();
-    } catch (_) {
-      return null;
+      if (!hasPermission) {
+        state = state.copyWith(
+          isLoading: false,
+          error: 'Нет разрешения на геолокацию',
+        );
+        return;
+      }
+
+      final position = await _locationService.getCurrentPosition();
+      _calculateForCoordinates(
+        position.latitude,
+        position.longitude,
+        'Текущее местоположение',
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: 'Не удалось определить местоположение',
+      );
     }
   }
 
@@ -177,7 +167,7 @@ class PrayerTimesNotifier extends StateNotifier<PrayerTimesState> {
 
   /// Обновить данные
   Future<void> refresh() async {
-    await _loadPrayerTimes();
+    _calculateForCoordinates(55.7558, 37.6173, 'Москва');
   }
 
   @override

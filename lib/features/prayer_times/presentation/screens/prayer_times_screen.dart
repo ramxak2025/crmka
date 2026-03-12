@@ -100,25 +100,36 @@ class PrayerTimesScreen extends ConsumerWidget {
       child: Column(
         children: [
           // Город — кликабельный для выбора
-          GestureDetector(
-            onTap: () => _showCityPicker(context, ref),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.location_on, color: Colors.white70, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  state.cityName.isNotEmpty ? state.cityName : 'Текущее местоположение',
-                  style: const TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // Кнопка выбора города
+              GestureDetector(
+                onTap: () => _showCityPicker(context, ref),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.location_on, color: Colors.white70, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      state.cityName.isNotEmpty ? state.cityName : 'Выберите город',
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 20),
+                  ],
                 ),
-                const SizedBox(width: 4),
-                const Icon(Icons.arrow_drop_down, color: Colors.white70, size: 20),
-              ],
-            ),
+              ),
+              const SizedBox(width: 8),
+              // Кнопка определения GPS
+              GestureDetector(
+                onTap: () => ref.read(prayerTimesProvider.notifier).detectLocation(),
+                child: const Icon(Icons.my_location, color: Colors.white70, size: 20),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
 
