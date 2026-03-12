@@ -31,10 +31,7 @@ class LocationService {
   /// Получить текущие координаты пользователя
   Future<Position> getCurrentPosition() async {
     return await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 100, // Обновлять при перемещении на 100 метров
-      ),
+      desiredAccuracy: LocationAccuracy.high,
     );
   }
 
